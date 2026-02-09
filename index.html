@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather Search-Bar</title>
+    <title>SkyCast 2026 | All-in-One</title>
     
     <style>
         :root {
@@ -77,6 +77,7 @@
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 15px;
+            margin-bottom: 2rem;
         }
 
         .detail-item {
@@ -89,6 +90,33 @@
         .detail-item label { display: block; font-size: 0.75rem; text-transform: uppercase; opacity: 0.7; margin-bottom: 5px; }
         .detail-item p { font-size: 1.1rem; font-weight: 600; }
 
+        /* --- New Forecast Styles --- */
+        .forecast-container {
+            border-top: 1px solid var(--glass-border);
+            padding-top: 1.5rem;
+        }
+
+        .forecast-container h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            font-weight: 400;
+            opacity: 0.8;
+        }
+
+        .forecast-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .forecast-row:last-child { border: none; }
+
+        .day-name { flex: 1; font-weight: 500; }
+        .day-temp { font-weight: 600; }
+        .day-desc { font-size: 0.8rem; opacity: 0.7; text-align: right; flex: 1; }
+
         .error { color: #ff8a8a; text-align: center; display: none; margin-top: 10px; }
     </style>
 </head>
@@ -96,7 +124,7 @@
 
     <div class="container">
         <div class="search-box">
-            <input type="text" id="cityInput" placeholder="Enter city/country name..." spellcheck="false">
+            <input type="text" id="cityInput" placeholder="Enter city name..." spellcheck="false">
             <button id="searchBtn">GO</button>
         </div>
 
@@ -125,36 +153,41 @@
                     <p id="feelsLike">--°</p>
                 </div>
             </div>
+
+            <div class="forecast-container">
+                <h3>5-Day Forecast</h3>
+                <div id="forecastList">
+                    </div>
+            </div>
         </div>
 
-        <div id="errorMsg" class="error">Place not found. Try again?</div>
+        <div id="errorMsg" class="error">City not found. Try again?</div>
     </div>
 
     <script>
-        const AY_PI_AI_Mkay = "8609b430b35a40fc51a32c707ad83592"; // pls don't spam or use it irresponsibly :) 1k calls/day limit
+        const AY_PI_AI_Mkay = "8609b430b35a40fc51a32c707ad83592"; // <--- PASTE YOUR KEY HERE
         
         const searchBtn = document.getElementById('searchBtn');
         const cityInput = document.getElementById('cityInput');
         const weatherContent = document.getElementById('weatherContent');
+        const forecastList = document.getElementById('forecastList');
         const errorMsg = document.getElementById('errorMsg');
 
         async function fetchWeather(city) {
-            const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${AY_PI_AI_Mkay}`;
+            const currentUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${AY_PI_AI_Mkay}`;
+            const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&units=metric&appid=${AY_PI_AI_Mkay}`;
             
             try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error("Not Found");
+                // 1. Fetch Current Weather
+                const currentRes = await fetch(currentUrl);
+                if (!currentRes.ok) throw new Error("Not Found");
+                const currentData = await currentRes.json();
+
+                // 2. Fetch Forecast
+                const forecastRes = await fetch(forecastUrl);
+                const forecastData = await forecastRes.json();
                 
-                const data = await response.json();
-                
-                // Update text
-                document.getElementById('cityName').textContent = data.name;
-                document.getElementById('temp').textContent = Math.round(data.main.temp) + "°";
-                document.getElementById('description').textContent = data.weather[0].main;
-                document.getElementById('humidity').textContent = data.main.humidity + "%";
-                document.getElementById('wind').textContent = data.wind.speed + " km/h";
-                document.getElementById('pressure').textContent = data.main.pressure + " hPa";
-                document.getElementById('feelsLike').textContent = Math.round(data.main.feels_like) + "°";
+                updateUI(currentData, forecastData);
 
                 weatherContent.style.display = "block";
                 errorMsg.style.display = "none";
@@ -162,6 +195,38 @@
                 weatherContent.style.display = "none";
                 errorMsg.style.display = "block";
             }
+        }
+
+        function updateUI(current, forecast) {
+            // Update Current Weather
+            document.getElementById('cityName').textContent = current.name;
+            document.getElementById('temp').textContent = Math.round(current.main.temp) + "°";
+            document.getElementById('description').textContent = current.weather[0].main;
+            document.getElementById('humidity').textContent = current.main.humidity + "%";
+            document.getElementById('wind').textContent = current.wind.speed + " km/h";
+            document.getElementById('pressure').textContent = current.main.pressure + " hPa";
+            document.getElementById('feelsLike').textContent = Math.round(current.main.feels_like) + "°";
+
+            // Update Forecast
+            forecastList.innerHTML = ""; // Clear old forecast
+            
+            // The API returns 40 results (every 3 hours). 
+            // We'll filter to get one reading per day (at 12:00 PM).
+            const dailyData = forecast.list.filter(item => item.dt_txt.includes("12:00:00"));
+
+            dailyData.forEach(day => {
+                const date = new Date(day.dt * 1000);
+                const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+                
+                const row = document.createElement('div');
+                row.className = 'forecast-row';
+                row.innerHTML = `
+                    <span class="day-name">${dayName}</span>
+                    <span class="day-temp">${Math.round(day.main.temp)}°</span>
+                    <span class="day-desc">${day.weather[0].main}</span>
+                `;
+                forecastList.appendChild(row);
+            });
         }
 
         searchBtn.addEventListener('click', () => {
