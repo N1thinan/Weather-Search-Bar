@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Search-Bar</title>
+    
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-color: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-color);
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 450px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 2rem;
+        }
+
+        input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--glass-border);
+            padding: 12px 20px;
+            border-radius: 15px;
+            color: white;
+            outline: none;
+        }
+
+        button {
+            background: #fff;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        button:active { transform: scale(0.95); }
+
+        .hero { text-align: center; margin-bottom: 2rem; }
+        .hero h1 { font-size: 2rem; font-weight: 300; }
+        .temp-main { font-size: 5rem; font-weight: 700; margin: 0.5rem 0; }
+        
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .detail-item {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            border-radius: 20px;
+            text-align: center;
+        }
+
+        .detail-item label { display: block; font-size: 0.75rem; text-transform: uppercase; opacity: 0.7; margin-bottom: 5px; }
+        .detail-item p { font-size: 1.1rem; font-weight: 600; }
+
+        .error { color: #ff8a8a; text-align: center; display: none; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="search-box">
+            <input type="text" id="cityInput" placeholder="Enter city/country name..." spellcheck="false">
+            <button id="searchBtn">GO</button>
+        </div>
+
+        <div id="weatherContent" style="display: none;">
+            <div class="hero">
+                <h1 id="cityName">---</h1>
+                <p id="description">Clear Sky</p>
+                <div class="temp-main" id="temp">--°</div>
+            </div>
+
+            <div class="details-grid">
+                <div class="detail-item">
+                    <label>Humidity</label>
+                    <p id="humidity">--%</p>
+                </div>
+                <div class="detail-item">
+                    <label>Wind</label>
+                    <p id="wind">-- km/h</p>
+                </div>
+                <div class="detail-item">
+                    <label>Pressure</label>
+                    <p id="pressure">-- hPa</p>
+                </div>
+                <div class="detail-item">
+                    <label>Feels Like</label>
+                    <p id="feelsLike">--°</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="errorMsg" class="error">Place not found. Try again?</div>
+    </div>
+
+    <script>
+        const AY_PI_AI_Mkay = "8609b430b35a40fc51a32c707ad83592"; // pls don't spam or use it irresponsibly :) 1k calls/day limit
+        
+        const searchBtn = document.getElementById('searchBtn');
+        const cityInput = document.getElementById('cityInput');
+        const weatherContent = document.getElementById('weatherContent');
+        const errorMsg = document.getElementById('errorMsg');
+
+        async function fetchWeather(city) {
+            const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${AY_PI_AI_Mkay}`;
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Not Found");
+                
+                const data = await response.json();
+                
+                // Update text
+                document.getElementById('cityName').textContent = data.name;
+                document.getElementById('temp').textContent = Math.round(data.main.temp) + "°";
+                document.getElementById('description').textContent = data.weather[0].main;
+                document.getElementById('humidity').textContent = data.main.humidity + "%";
+                document.getElementById('wind').textContent = data.wind.speed + " km/h";
+                document.getElementById('pressure').textContent = data.main.pressure + " hPa";
+                document.getElementById('feelsLike').textContent = Math.round(data.main.feels_like) + "°";
+
+                weatherContent.style.display = "block";
+                errorMsg.style.display = "none";
+            } catch (err) {
+                weatherContent.style.display = "none";
+                errorMsg.style.display = "block";
+            }
+        }
+
+        searchBtn.addEventListener('click', () => {
+            if (cityInput.value) fetchWeather(cityInput.value);
+        });
+
+        cityInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && cityInput.value) fetchWeather(cityInput.value);
+        });
+    </script>
+</body>
+</html>
